@@ -119,6 +119,87 @@ func TestQuerySqlComplex(t *testing.T){
 	}
 }
 
+func TestSqlInjection(t *testing.T){
+	db := GetConnection()
+	defer db.Close()
+
+	ctx := context.Background()
+
+	// username := "admin" // Input user yang seharusnya
+	username := "admin '; #" // Input user dengan SQL Injection
+	password := "salah" // Password yg benar admin@123
+
+	script := "SELECT username FROM user WHERE username = '"+username+
+	"' AND password='"+password+"' LIMIT 1 "
+	rows, err := db.QueryContext(ctx, script)
+	fmt.Println(script)
+	if err != nil {
+		panic(err)
+	}
+	defer rows.Close()
+
+	if rows.Next(){
+		var username string
+		err := rows.Scan(&username)
+		if err != nil {
+			panic(err)
+		}
+		fmt.Println("Success Login : ", username)
+	}else{
+		fmt.Println("Gagal Login")
+	}
+}
+
+func TestSqlInjectionSafe(t *testing.T){
+	db := GetConnection()
+	defer db.Close()
+
+	ctx := context.Background()
+
+	// username := "admin" // Input user yang seharusnya
+	username := "admin" // Input user dengan SQL Injection
+	password := "admin@123" // Password yg benar admin@123
+
+	script := "SELECT username FROM user WHERE username = ? AND password=? LIMIT 1 "
+	rows, err := db.QueryContext(ctx, script, username, password)
+	fmt.Println(script)
+	if err != nil {
+		panic(err)
+	}
+	defer rows.Close()
+
+	if rows.Next(){
+		var username string
+		err := rows.Scan(&username)
+		if err != nil {
+			panic(err)
+		}
+		fmt.Println("Success Login : ", username)
+	}else{
+		fmt.Println("Gagal Login")
+	}
+}
+
+func TestExecSqlSafe(t *testing.T){
+	db := GetConnection()
+	defer db.Close()
+
+	ctx := context.Background()
+	var script string
+
+	username := "luna"
+	password := "luna@123"
+
+	script = "INSERT INTO user(username, password) VALUES (?,?)"
+	
+	_, err := db.ExecContext(ctx, script, username, password)
+
+	if err != nil {
+		panic(err)
+	}
+	fmt.Println("Success insert new customer")
+}
+
 /**
  * EKSEKUSI PERINTAH SQL
  * Untuk menjalankan perintah SQL di golang bisa menggunakan function
@@ -182,4 +263,26 @@ func TestQuerySqlComplex(t *testing.T){
  * int64 => database/sql.NullInt64
  * Time.Time => database/sql.NullTime
  * Data yang akan dikembalikan berupa struct 
+ * 
+ * SQL INJECTION
+ * SQL Injection adalah sebuah teknik yang menyalahgunakan sebuah celah keamanan yang terjadi 
+ * dalam lapisan basis data sebuah aplikasi 
+ * Biasanya, SQL Injection dilakukan dengan mengirim input dari user dengan perintah yang salah,
+ * sehingga menyebabkan hasil SQL yang kita buat jadi tidak valid
+ * SQL Injection sangat berbahaya, jika sampai kita salah membuat SQL, bisa jadi data kita tidak aman 
+ * 
+ * * Solusinya
+ * Jangan membuat query SQL secara manual dengan menggabungkan String secara bulat-bulat 
+ * Jika kita membutuhkan paramter ketika membuat SQL, maka bisa menggunakan function Execute
+ * atau query dengan parameter
+ * 
+ * SQL DENGAN PARAMETER
+ * Sekarang kita sudah tahu bahayanya SQL Injection jika menggabungkan string ketika membuat query
+ * Jika ada kebutuhan seperti itu, sebenarnya function exec dan query memiliki paramter tambahan
+ * yang bisa digunakan untuk mensubtitusi parameter dari function tersebut ke SQL query yang kita buat
+ * Untuk menandai sebuah SQL Membutuhkan paramter, Kita bisa menggunakan karakter ? (tanda tanya)
+ * * Contoh SQL Injection
+ * SELECT username FROM user WHERE username = ? AND password = ? LIMIT 1
+ * INSERT INTO user(username, password) VALUES(?,?)
+ * Dan lain-lain
  */
