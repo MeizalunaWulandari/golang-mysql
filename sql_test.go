@@ -185,7 +185,7 @@ func TestExecSqlSafe(t *testing.T){
 	defer db.Close()
 
 	ctx := context.Background()
-	var script string
+	var script  string
 
 	username := "luna"
 	password := "luna@123"
@@ -198,6 +198,31 @@ func TestExecSqlSafe(t *testing.T){
 		panic(err)
 	}
 	fmt.Println("Success insert new customer")
+}
+
+func TestAutoIncrement(t *testing.T){
+	db := GetConnection()
+	defer db.Close()
+
+	ctx := context.Background()
+	var script  string
+
+	email := "andini@gmail.com"
+	comment := "Test comment andini"
+
+	script = "INSERT INTO comments(email, comment) VALUES (?,?)"
+	
+	result, err := db.ExecContext(ctx, script, email, comment)
+
+	if err != nil {
+		panic(err)
+	}
+	insertId, err :=  result.LastInsertId()
+	if err != nil{
+		panic(err)
+	}
+
+	fmt.Println("Success insert new comment with id :", insertId)
 }
 
 /**
@@ -285,4 +310,14 @@ func TestExecSqlSafe(t *testing.T){
  * SELECT username FROM user WHERE username = ? AND password = ? LIMIT 1
  * INSERT INTO user(username, password) VALUES(?,?)
  * Dan lain-lain
+ * 
+ * AUTO INCREMENT
+ * Kadang kita membuat sebuah table dengan id auto increment 
+ * Dan kadang pula, kita ingin mengambil data yang sudah kita insert kedalam MySQL
+ * Sebenarnya kita bisa melakukan query ulang dengan menggunakan SELECT LAST_INSERT_ID
+ * namun tersebut cukup merepotkan karena harus 2x query
+ * Untungnya di golang ada cara yang lebih mudah 
+ * Kita bisa menggunakan function (result)LastInsertId() untuk mendapatkan Id terakhir 
+ * yang dibuat secara auto increment
+ * Result adalah object yang dikembalikan ketika kita menggunakan function Exec
  */
