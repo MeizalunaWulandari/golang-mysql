@@ -252,7 +252,41 @@ func TestPrepareStatement(t *testing.T){
 		}
 		fmt.Println("Comment Id : ", id)
 	}
+}
 
+func TestTransaction(t *testing.T){
+	db := GetConnection()
+	defer db.Close()
+
+	ctx := context.Background()
+	tx, err := db.Begin()
+
+	// Do Transaction
+	if err != nil {
+		panic(err)
+	}
+	script := "INSERT INTO comments(email, comment) VALUES (?,?)"
+
+	for i := 9; i < 20; i++ {
+		email := "andini"+strconv.Itoa(i)+"@gmail.com"
+		comment := "Komentar ke "+strconv.Itoa(i)
+
+		result, err := tx.ExecContext(ctx, script, email, comment)
+		if err != nil{
+			panic(err)
+		}
+		id, err := result.LastInsertId()
+		if err != nil{
+			panic(err)
+		}
+		fmt.Println("Comment Id : ", id)
+	}
+
+	// End Transaction
+	err = tx.Commit()
+	if err != nil {
+		panic(err)
+	}
 
 }
 
@@ -353,7 +387,6 @@ func TestPrepareStatement(t *testing.T){
  * Result adalah object yang dikembalikan ketika kita menggunakan function Exec
  * 
  * PREPARE STATEMENT
- * * Query Atau Exec Dengan Parameter
  * Saat menggunakan Function Query atau Exec yang menggunakan parameter, sebenarnya 
  * implementasi dibawahnya menggunakan Prepare statement
  * Jadi tahapan pertama statementnya disiapkan terlebih dahalu, setelah itu baru 
@@ -375,4 +408,16 @@ func TestPrepareStatement(t *testing.T){
  * Untuk membuat Prepare Statement bisa bisa menggunakan (DB)Prepare(Contex, sql)
  * Prepare Statement direpresentasikan dalam struct database/sql.Stmt
  * Sama seperti resource sql lainnya, Stmt() harus di close jika sudah tidak digunakan
+ * 
+ * DATABASE TRANSACTION
+ * Secara default, semua perintah SQL yang kita kirim menggunakan Golang, akan otomatis
+ * di commit, atau istilahnya auto commit
+ * Namun kita bisa menggunakan fitur transaksi sehingga SQL yang kita kirim tidak secara
+ * otomatis di commit ke database
+ * Untuk memulai transaksi kita bisa menggunakan function (DB)Begin(), dimana akan 
+ * menghasilkan struct Tx yang merupakan representasi Transaction
+ * Struct Tx ini yang kita gunakan sebagai pengganti DB untuk melakukan transaksi, dimana
+ * hampir function di DB ada di Tx seperti Exec, Query Atau Prepare
+ * Setelah selesai proses transaksi kita bisa menggunakan function (Tx)Commit()untuk 
+ * melakukan commit atau Rollback() jika ingin membatalkan proses transaction
  */
