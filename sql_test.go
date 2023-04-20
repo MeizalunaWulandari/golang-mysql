@@ -6,6 +6,7 @@ import (
 	"context"
 	"time"
 	"database/sql"
+	"strconv"
 )
 
 func TestExecSql(t *testing.T){
@@ -225,6 +226,36 @@ func TestAutoIncrement(t *testing.T){
 	fmt.Println("Success insert new comment with id :", insertId)
 }
 
+func TestPrepareStatement(t *testing.T){
+	db := GetConnection()
+	defer db.Close()
+
+	ctx :=  context.Background()
+	script := "INSERT INTO comments(email, comment) VALUES (?,?)"
+	statement, err :=  db.PrepareContext(ctx, script)
+	if err != nil{
+		panic(err)
+	}
+	defer statement.Close()
+
+	for i := 0; i < 10; i++ {
+		email := "luna"+strconv.Itoa(i)+"@gmail.com"
+		comment := "Komentar ke "+strconv.Itoa(i)
+
+		result, err := statement.ExecContext(ctx, email, comment)
+		if err != nil{
+			panic(err)
+		}
+		id, err := result.LastInsertId()
+		if err != nil{
+			panic(err)
+		}
+		fmt.Println("Comment Id : ", id)
+	}
+
+
+}
+
 /**
  * EKSEKUSI PERINTAH SQL
  * Untuk menjalankan perintah SQL di golang bisa menggunakan function
@@ -320,4 +351,28 @@ func TestAutoIncrement(t *testing.T){
  * Kita bisa menggunakan function (result)LastInsertId() untuk mendapatkan Id terakhir 
  * yang dibuat secara auto increment
  * Result adalah object yang dikembalikan ketika kita menggunakan function Exec
+ * 
+ * PREPARE STATEMENT
+ * * Query Atau Exec Dengan Parameter
+ * Saat menggunakan Function Query atau Exec yang menggunakan parameter, sebenarnya 
+ * implementasi dibawahnya menggunakan Prepare statement
+ * Jadi tahapan pertama statementnya disiapkan terlebih dahalu, setelah itu baru 
+ * diisi dengan parameter
+ * Kadang ada kasus kita ingin melakukan beberapa hal yang sama sekaligus, hanya
+ * berbeda parameternya saja, misalnya insert data langsung banyak
+ * Pembuatan prepare statement bisa dilakukan dengan manual, tanpa harus menggunakan
+ * Query atau Exec dengan parameter
+ * 
+ * * Prepare Statement
+ * Saat membuat prepare statement, secara otomatis akan mengenali koneksi database
+ * yang digunakan
+ * Sehingga ketika kita mengekseskui Prepare statement berkali-kali, maka akan 
+ * menggunakan koneksi yang sama dan lebih efisien karena pembuatan prepare statementnya
+ * hanya sekali diawal saja
+ * Jika menggunakan Query atau Exec dengan parameter, kita tidak bisa menjamin bahwa 
+ * koneksi yang digunakan akan sama, oleh karena itu, bisa jadi prepare statement 
+ * akan selalu dibuat berkali-kali walaupun menggunakan SQL yang sama 
+ * Untuk membuat Prepare Statement bisa bisa menggunakan (DB)Prepare(Contex, sql)
+ * Prepare Statement direpresentasikan dalam struct database/sql.Stmt
+ * Sama seperti resource sql lainnya, Stmt() harus di close jika sudah tidak digunakan
  */
